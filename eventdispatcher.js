@@ -21,50 +21,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 */
+
 var EventDispatcher = function(){
-	var listenerChain = {};
-	var eventRoster = [];
 	
-	this.registerEvent = function(name){
-		eventRoster.push(name);
-		listenerChain[name] = [];
-	};
-	this.registerEvents = function(arr){
-		for(var i = 0, len= arr.length; i < len; i++)
-			this.registerEvent(arr[i]);
-	};
-	this.getEventRoster = function(){
-		return eventRoster;
-	};
-	this.getListenerChain = function(){
-		return listenerChain;
-	};
-	this.addEventListener = function(type, listener){
-		if(!listenerChain[type])					
-			listenerChain[type] = [listener];
-		else
-			listenerChain[type].push(listener);	
-	};
-	this.hasEventListener = function(type){
-		return (typeof listenerChain[type] != "undefined" && listenerChain[type].length > 0);
-	};
-	this.removeEventListener = function(type, listener){
-		if(!this.hasEventListener(type))
-			return false;	
-		for(var i = 0, l = listenerChain[type].length; i < l; i++)
-			if(listenerChain[type][i] === listener)
-				listenerChain[type].splice(i, 1);		
-	};
-	this.dispatchEvent = function(type, arg){
-		for(var i = 0, l = listenerChain[type].length; i < l; i++)
-			listenerChain[type][i](arg);	
-	};
-	this.once = function(type, listener){
+	EventDispatcher.superclass.constructor.apply(this, arguments);
+	
+	this.addEventListener = this.on;
+	this.removeEventListener = this.un;
+	this.dispatchEvent = this.fireEvent;
+	this.registerEvents = this.addEvents;
+	
+	this.once = function(name, listener, scope, cfg){
+		var self = this;
 		var _listener = function(arg){
 			listener(arg);
-			this.removeEventListener(type, _listener);
-		}.bind(this)
-		this.addEventListener(type, _listener);	
+			self.removeListener(name, _listener, scope);
+		};
+		this.on(name, _listener, scope, cfg);
 	};
-	this.on = this.addEventListener, this.un = this.removeEventListener, this.fire = this.dispatchEvent;
-}
+};
+Ext.extend(EventDispatcher, Ext.util.Observable);

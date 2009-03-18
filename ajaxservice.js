@@ -21,8 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 */
+
 var AjaxService = function(url, iMethod, iSync){	
-	AjaxService.superclass.call(this, null);
+	AjaxService.superclass.constructor.call(this, null);
 	
 	var params = {}, requestHeader = {}, queue = [];
 	var method = "";
@@ -73,7 +74,7 @@ var AjaxService = function(url, iMethod, iSync){
 	function request(iUrl, prm, iMethod){
 		transactionFlag = true;
 		var xhr = getXHR();		
-		xhr.onreadystatechange = handleStateChange.bind(self, xhr);
+		xhr.onreadystatechange = handleStateChange.createDelegate(self, [xhr]);
 		xhr.open(iMethod, iUrl, true);
 		setRequestHeaders(xhr);		
 		xhr.send(serializeQueryString(prm));
@@ -81,7 +82,7 @@ var AjaxService = function(url, iMethod, iSync){
 			startTimeout(xhr);
 	}
 	function startTimeout(xhr){
-		xhr.timeout = setTimeout(handleTimeout.bind(this, xhr), timeoutDuration);
+		xhr.timeout = setTimeout(handleTimeout.createDelegate(this, [xhr]), timeoutDuration);
 	}
 	function setRequestHeaders(myXhr){
 		for(var i in requestHeader)
@@ -136,5 +137,6 @@ var AjaxService = function(url, iMethod, iSync){
 	this.setMethod(iMethod || "POST");
 	this.getRawXHR = getXHR;
 	
-};
-Class.extend(AjaxService, EventDispatcher);
+}
+
+Ext.extend(AjaxService, EventDispatcher);
