@@ -8,7 +8,7 @@ AgileAjax is a package of javascript files that work independently and in conjun
 
 = Details =
 
-* Handles cross browser XHR creation and event delegation. *
+  * Handles cross browser XHR creation and event delegation. *
 * Bundled in an ultra light framework to handle function closures, class inheritance and custom events.*
 * Specialized versions for Prototype 1.6 and Ext 2.0.  Leading in less new code to incorporate to your project if you're using either framework.*
 * Delivers a framework to manage ajax state problems.  Such as bookmarking or history(back button issue) *
