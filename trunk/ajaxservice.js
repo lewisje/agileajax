@@ -24,15 +24,21 @@ THE SOFTWARE.
 var AjaxService = function(url, iMethod, iSync){	
 	AjaxService.superclass.call(this, null);
 	
-	var params = {}, requestHeader = {}, queue = [];
+	var params = {}, requestHeader = {}, cache = {}, queue = [];
 	var method = "";
-	var self = this, transactionFlag = false, timeoutDuration = false, timeout = false, synchronous = iSync;
+	var self = this, transactionFlag = false, timeoutDuration = false, timeout = false, cacheEnabled = false, synchronous = iSync;
 	var stateArr = ['uninitialized', 'loading', 'loaded', 'interactive', 'complete'];
 	this.registerEvents( ["success", "failure", "exception", "timeout"].concat(stateArr));
 	this.setMethod = function(meth){
 		method = meth;
 		if(method.toUpperCase() == "POST")
 			this.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	};
+	this.enableCache = function(){
+		cacheEnabled = true;
+	};
+	this.disableCache = function(){
+		cacheEnabled = false;		
 	};
 	this.setParams = function(prm){
 		params = prm;
@@ -72,11 +78,21 @@ var AjaxService = function(url, iMethod, iSync){
 	}
 	function request(iUrl, prm, iMethod){
 		transactionFlag = true;
+		var params = serializeQueryString(prm);
+		var cacheKey = [iMethod, iUrl, params].join("");
+		
+		if(cacheEnabled && cache[cacheKey]){
+			dispatchFromCache(cacheKey);
+			//var xhr = cache[cacheKey];
+			//handleStateChange(xhr, cacheKey);
+			return true;			
+		}
 		var xhr = getXHR();		
-		xhr.onreadystatechange = handleStateChange.bind(self, xhr);
+		xhr.onreadystatechange = handleStateChange.bind(self, xhr, cacheKey);
 		xhr.open(iMethod, iUrl, true);
 		setRequestHeaders(xhr);		
-		xhr.send(serializeQueryString(prm));
+		xhr.send(params);
+		
 		if(timeoutDuration)
 			startTimeout(xhr);
 	}
@@ -87,12 +103,15 @@ var AjaxService = function(url, iMethod, iSync){
 		for(var i in requestHeader)
 			myXhr.setRequestHeader(i, requestHeader[i]);	
 	}
-	function handleStateChange(xhr){
+	function handleStateChange(xhr, key){
 		var state = stateArr[xhr.readyState];
+		
 		try{
 			if(state == "complete"){
 				clearTimeout(xhr.timeout);
-				transactionFlag = false;					
+				transactionFlag = false;
+				if(cacheEnabled && !cache[key])
+					cache[key] = xhr;				
 			}			
 			this.dispatchEvent(state, xhr);
 			if(state == "complete" && isSuccess(xhr.status))
@@ -105,7 +124,7 @@ var AjaxService = function(url, iMethod, iSync){
 			}
 		}
 		catch(e){
-			this.dispatchEvent("exception", xhr, e);
+			this.dispatchEvent("exception", e);
 		}
 	}
 	function handleTimeout(xhr){
@@ -118,6 +137,18 @@ var AjaxService = function(url, iMethod, iSync){
 			this.dispatchEvent("exception", xhr);
 		}
 	};
+	function dispatchFromCache(key){
+		var xhr = cache[key];
+		setTimeout(function(){
+			try{
+				self.dispatchEvent("complete", xhr);
+				self.dispatchEvent("success", xhr);
+			}
+			catch(e){
+				self.dispatchException("exception", xhr, e);
+			}
+		}, 50);		
+	}
 	
 	
 	var getXHR = function(){
