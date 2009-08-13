@@ -40,6 +40,8 @@ var EventDispatcher = function(){
 		return listenerChain;
 	};
 	this.addEventListener = function(type, listener){
+		if(!(listener instanceof Function))
+			return false;
 		if(!listenerChain[type])					
 			listenerChain[type] = [listener];
 		else
@@ -56,6 +58,7 @@ var EventDispatcher = function(){
 				listenerChain[type].splice(i, 1);		
 	};
 	this.dispatchEvent = function(type, arg){
+		if(listenerChain[type])
 		for(var i = 0, l = listenerChain[type].length; i < l; i++)
 			listenerChain[type][i](arg);	
 	};

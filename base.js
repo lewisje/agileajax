@@ -6,8 +6,9 @@
  *
  *--------------------------------------------------------------------------*/
 
-
 if(!window["Prototype"]){
+
+
 	Object.extend = function(destination, source) {
 	  for (var property in source)
 		destination[property] = source[property];
@@ -24,6 +25,7 @@ if(!window["Prototype"]){
 		return results;
 	  }
 	}
+	
 	Function.prototype.bind = function(){
 		var __method = this, args = $A(arguments), object = args.shift();
 		return function() {
@@ -32,9 +34,23 @@ if(!window["Prototype"]){
 	};
 	
 	var Class = {};
+	
+	var Event = {
+	observe: function(element, eventName, handler) {
+	      try{
+	        element.addEventListener(eventName, handler, false);
+	      } catch(e){
+	    	element.attachEvent("on" + eventName, handler);
+	      }
+
+	      return element;
+	    }
+	};
+	
 }
+
 Class.extend = function(sub, superClass){
-	Object.extend(sub.prototype, superClass.prototype);
+	Object.extend(sub.prototype, superClass.prototype);	
 	sub.superclass = superClass;
 	return sub;
 };

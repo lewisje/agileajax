@@ -21,12 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 */
-var AjaxService = function(url, iMethod, iSync){	
+var AjaxService = function(url, iMethod, iSync){
+	
 	AjaxService.superclass.call(this, null);
 	
 	var params = {}, requestHeader = {}, cache = {}, queue = [];
 	var method = "";
-	var self = this, transactionFlag = false, timeoutDuration = false, timeout = false, cacheEnabled = false, synchronous = iSync;
+	var self = this, transactionFlag = false, timeoutDuration = false, timeout = false, cacheEnabled = false, synchronous = iSync, historyInstance = false;
 	var stateArr = ['uninitialized', 'loading', 'loaded', 'interactive', 'complete'];
 	this.registerEvents( ["success", "failure", "exception", "timeout"].concat(stateArr));
 	this.setMethod = function(meth){
@@ -34,6 +35,21 @@ var AjaxService = function(url, iMethod, iSync){
 		if(method.toUpperCase() == "POST")
 			this.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 	};
+	this.enableHistory = function(dom){
+		var history = this.createHistory(dom);		
+		history.enable();
+	};
+	this.disableHistory = function(){
+		var history = this.createHistory();
+		history.disable();		
+	};
+	this.createHistory = function(dom){
+		if(!historyInstance){
+			historyInstance = isIE() ? new AjaxHistorySnake(this, dom) : new AjaxHistoryGecko(this);
+			historyInstance.on('change', self.send);
+		}
+		return historyInstance;
+	}
 	this.enableCache = function(){
 		cacheEnabled = true;
 	};
@@ -61,6 +77,7 @@ var AjaxService = function(url, iMethod, iSync){
 		else
 			request(url, prm || params, method);
 	}
+	
 	function queueRequest(iUrl, iPrm, iMethod){
 		queue.push({ url : iUrl, params : iPrm, method : iMethod});
 	}
@@ -79,6 +96,7 @@ var AjaxService = function(url, iMethod, iSync){
 	function request(iUrl, prm, iMethod){
 		transactionFlag = true;
 		var params = serializeQueryString(prm);
+		console.log("Here are your params %s and the raw %s", params, prm);
 		var cacheKey = [iMethod, iUrl, params].join("");
 		
 		if(cacheEnabled && cache[cacheKey]){
@@ -89,8 +107,12 @@ var AjaxService = function(url, iMethod, iSync){
 		}
 		var xhr = getXHR();		
 		xhr.onreadystatechange = handleStateChange.bind(self, xhr, cacheKey);
+		if(iMethod.toLowerCase() == "get" && params.length > 0)
+			iUrl += "?" + params;			
 		xhr.open(iMethod, iUrl, true);
-		setRequestHeaders(xhr);		
+		setRequestHeaders(xhr);
+		xhr.parameters = params;
+		self.dispatchEvent("uninitialized", xhr);
 		xhr.send(params);
 		
 		if(timeoutDuration)
@@ -149,7 +171,10 @@ var AjaxService = function(url, iMethod, iSync){
 			}
 		}, 50);		
 	}
-	
+	function isIE()
+	{
+		return /msie/i.test(navigator.userAgent) && !/opera/i.test(navigator.userAgent);
+    }
 	
 	var getXHR = function(){
 		try{
@@ -168,4 +193,10 @@ var AjaxService = function(url, iMethod, iSync){
 	this.getRawXHR = getXHR;
 	
 };
+
+try{
 Class.extend(AjaxService, EventDispatcher);
+}
+catch(e){
+	alert("Failed to extend class " + e.message);
+}
