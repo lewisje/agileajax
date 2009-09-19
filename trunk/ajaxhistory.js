@@ -50,13 +50,18 @@ var AjaxHistory = function(service, dom){
 	this.getForm = function(){
 		return form;
 	};
-	this.registerRequest = function(xhr){
-		var url = this.getRawURL();
-		var base = this.getURL(url);
-		if(xhr.parameters.toString().length > 0)
-			this.setURL(base + "#" + xhr.parameters);
+	this.updateURL = function(parameters){
+		var base = this.getBaseURL();
+		var url = base + "#" + parameters;
+		
+		if(parameters.toString().length > 0)
+			this.setURL(base + "#" + parameters);
 	
-	}	
+		return url;
+	}
+	this.registerRequest = function(xhr){
+		this.updateURL(xhr.parameters);	
+	};
 	function handleServiceRequest(xhr){
 		self.registerRequest(xhr);
 	}
@@ -75,7 +80,7 @@ var AjaxHistoryGecko = function(){
 	this.enable = function(){
 		startTimer();
 		this.service.addEventListener("complete", superRegisterRequestHandle);
-	}
+	};
 	this.disable = function(){
 		stopTimer();
 		this.service.removeEventListener("complete", superRegisterRequestHandle);
@@ -102,39 +107,63 @@ var AjaxHistoryGecko = function(){
 };
 Class.extend(AjaxHistoryGecko, AjaxHistory);
 var AjaxHistorySnake = function(service, dom){
-	AjaxHistoryGecko.superclass.apply(this, arguments);
+	AjaxHistorySnake.superclass.apply(this, arguments);
 	var self = this;
-	var registration = false;
-	
-	this.setURL = function(myURL){
-		//window.location = myURL;
-	}
+	var registration = false, serviceFlag = false;
+	var requestStack = [];
 	this.submitForm = function(){
 		this.getForm().submit();
 	};
-	this.getRawURL = function(){
-		return  this.getIFrame().contentWindow.location.href.toString();
+	this.setURL = function(myURL){
+		console.log("setting url to " + myURL);
+		window.location = myURL;
 	};
+	/*
+	this.getRawURL = function(){
+		return this.getIFrame().contentWindow.location.href.toString();
+	};
+	*/
 	var superRegisterRequest = this.registerRequest.bind(this);
-	
-	this.registerRequest = function(xhr){		
+
+	this.registerRequest = function(xhr){
+		if(serviceFlag){
+			serviceFlag = false;
+			return serviceFlag;
+		}
 		superRegisterRequest(xhr);
 		var params = stringToHash(xhr.parameters);
 		flushElements();
 		generateElements(params);
 		registration = true;
+		requestStack.push(xhr);
 		this.submitForm();
+		
 	};
 	
 	this.handleFrameLoad = function(){
-		console.log("Inside frameload snake %o", this);
-		if(registration)
-			return registration = false;
-		var frame = this.getIFrame();
-		var url = frame.contentWindow.location.href.toString();
-		var params = this.getParams(url);
-		if(params != "")
-			this.dispatchEvent("change", params);
+		
+		if(registration){// if it is simply registering an event, which also causes the frame to load, take no action
+			//otherwise the behavior would become recursive.  The service takes the action of sending a request, the history object listens to the complete request event
+			//and then takes appropriate action.  Once the user begins to use the history traversal controls then the frame will load as well
+			//thus allowing the history module to hijack this event and dispatch the appropriate event, which the service
+			//is listening to to re-send the request.
+			registration = false;
+			return registration;
+		}	
+		setTimeout(function(){
+			var frame = this.getIFrame();
+			var url = frame.contentWindow.location.href.toString();
+			console.log("IFRAME URL = " + url);
+			var params = this.getParams(url);
+			this.updateURL(params);
+			if(params != ""){
+				serviceFlag = true;
+				this.dispatchEvent("change", params);
+			}
+			
+			
+			}.bind(this), 100);
+		
 	};
 
 	var eventHandleRegisterRequest = this.registerRequest.bind(this);
@@ -174,10 +203,6 @@ var AjaxHistorySnake = function(service, dom){
 			hash[key] = value;
 		}
 		return hash;
-	}
-
-
-
-	
+	}	
 }
 Class.extend(AjaxHistorySnake, AjaxHistory);
