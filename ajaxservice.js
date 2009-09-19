@@ -45,8 +45,9 @@ var AjaxService = function(url, iMethod, iSync){
 	};
 	this.createHistory = function(dom){
 		if(!historyInstance){
-			historyInstance = isIE() ? new AjaxHistorySnake(this, dom) : new AjaxHistoryGecko(this);
+			historyInstance = new AjaxHistoryGecko(this);
 			historyInstance.on('change', self.send);
+			
 		}
 		return historyInstance;
 	}
@@ -113,8 +114,9 @@ var AjaxService = function(url, iMethod, iSync){
 		setRequestHeaders(xhr);
 		xhr.parameters = params;
 		self.dispatchEvent("uninitialized", xhr);
+
 		xhr.send(params);
-		
+
 		if(timeoutDuration)
 			startTimeout(xhr);
 	}
