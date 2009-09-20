@@ -45,9 +45,8 @@ var AjaxService = function(url, iMethod, iSync){
 	};
 	this.createHistory = function(dom){
 		if(!historyInstance){
-			historyInstance = new AjaxHistoryGecko(this);
-			historyInstance.on('change', self.send);
-			
+			historyInstance = new AjaxHistory(this);
+			historyInstance.on('change', self.send);			
 		}
 		return historyInstance;
 	}
@@ -97,7 +96,6 @@ var AjaxService = function(url, iMethod, iSync){
 	function request(iUrl, prm, iMethod){
 		transactionFlag = true;
 		var params = serializeQueryString(prm);
-		console.log("Here are your params %s and the raw %s", params, prm);
 		var cacheKey = [iMethod, iUrl, params].join("");
 		
 		if(cacheEnabled && cache[cacheKey]){
